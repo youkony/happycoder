@@ -3,12 +3,32 @@ import random
 import pygame
 import copy
 
+
+
+######### 
+# colors []     : 10 random [r,g,b] colors
+#                 color[0] is white as eraser
+
 colors = [[random.randint(1,255) for n in range(3)] for m in range(10)]
 colors[0] = [255,255,255]
 
-class brick:
+########
+# cBrick class   : brick class
+#                 created when new brick is necessary
+#       shapes []   : 4 types of brick shape. prime number 
+#       bricks []   : store the brick images per rotations. multiplication of prime numbers (shapes)
+#       x , y   : position of brick. when created, x = random, y = 0
+#       r       : rotation. random in rotations when created
+#       c       : colors. random in colors when created
+#       s       : shape. random in shapes when created
+#       image []    : the image of the brick. extracted from bricks using shape (s)    
+#       __init__ () : initialize a brick when brick() is called
+#       rotate ()   : update r. update the image of the rotation
+#       move ()     : update x, y
 
-    shapes = [2,3,5,7] #I, 2, T, O
+class cBrick:
+
+    shapes = [2,3,5,7] #I, Z, T, O
     bricks = [
         [ # rotation-0
             [1*3*5*7, 2*3*5*7, 1*1*5*1], 
@@ -39,7 +59,7 @@ class brick:
     s = 2 # shape
     image = None # [][]
     
-    def __init__(self):
+    def __init__(self): 
         self.x = random.randint(0, 7)
         self.y = 0
         self.c = random.randint(1, len(colors)-1)
@@ -58,51 +78,67 @@ class brick:
         self.x += dx
         self.y += dy
 
-class board:
+########
+# cTetris class    : tetris class.  
+#       h, w   : size of game board
+#       brick *  : instance of cBrick
+#       board [] : game board.
+#       __init__ () : initialize Tetris when instance is created      
+#       newBrick () : make new brick instance
+#       moveBrick ()
+#       rotateBrick ()
+#       dropBrick ()
+#       freezeBrick ()  : when brick meets bottom, brick image is merged to board.
+#       intersact () : decide the brick meets obstacles.
+#       composite () : merge the brick image to board image
+#       getImage () : get image that is displayed 
+#       removeRows () : remove the filled rows in board
+
+class cTetris:
     h = 0
     w = 0
-    b = None # brick
-    grid = None # [][]
+    brick = None
+    board = None # [][]
 
     def __init__(self, h, w):
         self.h = h 
         self.w = w
-        self.grid = [[0 for i in range(w)] for j in range(h)]
+        self.board = [[0 for i in range(w)] for j in range(h)]
             
     def newBrick(self):
-       self.b = brick()
+       self.brick = cBrick()
 
     def moveBrick(self, dx, dy):
-        self.b.move(dx, dy)
+        self.brick.move(dx, dy)
 
     def rotateBrick(self, dr):
-        self.b.rotate(dr)    
+        self.brick.rotate(dr)    
         
     def dropBrick(self):
-        for j in range(self.b.y, len(self.grid)):
+        for j in range(self.brick.y, len(self.board)):
             self.moveBrick(0, 1)
             if self.intersect() == True:
                 self.moveBrick(0, -1)
                 break        
     
     def freezeBrick(self):
-        self.composite(self.grid, self.b) 
+        self.composite(self.board, self.brick) 
     
-    def composite(self, grid, brick):
+    def composite(self, board, brick):
         y = brick.y
         x = brick.x
         for j in range(y, y+len(brick.image)):
-            if j >= 0 and j < len(grid):
+            if j >= 0 and j < len(board):
                 for i in range(x, x+len(brick.image[j-y])):
-                    if i >= 0 and i < len(grid[j]) and brick.image[j-y][i-x] != 0:
-                        grid[j][i] = brick.image[j-y][i-x]
+                    if i >= 0 and i < len(board[j]) and brick.image[j-y][i-x] != 0:
+                        board[j][i] = brick.image[j-y][i-x]
                 
     def intersect(self):
         s1 = 0
-        for j in range(len(self.grid)):
-            s1 += sum(self.grid[j])
-        for j in range(len(self.b.image)):
-            s1 += sum(self.b.image[j])
+        for j in range(len(self.board)):
+            s1 += sum(self.board[j])
+        for j in range(len(self.brick.image)):
+            s1 += sum(self.brick.image[j])
 
         s2 = 0
         tmp = self.getImage()          
@@ -112,22 +148,41 @@ class board:
         return (s1 != s2)
     
     def getImage(self):
-        tmp = copy.deepcopy(self.grid)
-        if self.b is not None:   
-            self.composite(tmp, self.b)
+        tmp = copy.deepcopy(self.board)
+        if self.brick is not None:   
+            self.composite(tmp, self.brick)
         return tmp
                     
     def removeRows(self):
-        for j in range(len(self.grid)):
+        for j in range(len(self.board)):
             m = 1
-            for i in range(len(self.grid[j])):
-                m *= self.grid[j][i]
+            for i in range(len(self.board[j])):
+                m *= self.board[j][i]
             if m != 0:
                 for jj in range(j, 0, -1):
-                    self.grid[jj] = copy.deepcopy(self.grid[jj-1]) 
-                self.grid[0] = [0 for i in range(len(self.grid[jj]))]    
+                    self.board[jj] = copy.deepcopy(self.board[jj-1]) 
+                self.board[0] = [0 for i in range(len(self.board[jj]))]    
 
-#
+#########
+# game routine
+# 
+# pygame.init() 
+# pygame.display.set_mode()
+# pygame.time.clock()
+# create cTetris isntance
+# while 
+#   move_down
+#   for event in pygame.event.get()
+#       if key-down & UP : rotate
+#       if key-down & SPACE : drop
+#       if key-down & LEFT : move_left
+#       if key-down & RIGHT : move_right
+#       if quit : do quit
+#   gameover decision    
+#   redraw board
+#   redraw text
+# pygame.quit()        
+
 BLACK = (0,0,0)
 WHITE = (255,255,255)
 GRAY = (128,128,128)
@@ -147,11 +202,11 @@ counter = 0
 pressing_down = False
 state = "start"
 
-tetris = board(20, 10)
+tetris = cTetris(20, 10)
 
 while not done:
     
-    if tetris.b is None:
+    if tetris.brick is None:
         tetris.newBrick()
         
     counter += 1
